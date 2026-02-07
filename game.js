@@ -759,13 +759,6 @@ function initializeApp() {
     // All revealed
     document.getElementById('start-gameplay').addEventListener('click', startGameplay);
     
-    // Gameplay
-    document.getElementById('next-turn').addEventListener('click', nextTurn);
-    document.getElementById('start-voting').addEventListener('click', startVoting);
-    
-    // Voting
-    document.getElementById('reveal-votes').addEventListener('click', revealVotes);
-    
     // Vote results
     document.getElementById('continue-after-vote').addEventListener('click', continueAfterVote);
     
@@ -847,17 +840,14 @@ function startCardReveal() {
     
     GameState.playerNames = names;
     
-    // Select random word pairs from topic
+    // Select random word pair from topic
     const topic = WORD_DATABASE[GameState.selectedTopic];
     const shuffledPairs = shuffleArray([...topic.pairs]);
     
-    // First pair for civilians
+    // Use the same pair - civilians get one word, Mr. White gets the similar word
     const mainPair = shuffledPairs[0];
-    GameState.civilianWord = mainPair.civilian;
-    
-    // Pick a different word for Mr. White from another pair
-    const mrWhitePair = shuffledPairs[1] || shuffledPairs[0];
-    GameState.mrWhiteWord = mrWhitePair.civilian;
+    GameState.civilianWord = mainPair.civilian;      // e.g., "Coffee"
+    GameState.mrWhiteWord = mainPair.undercover;     // e.g., "Tea" (similar word)
     
     // Assign roles
     assignRoles();
@@ -985,26 +975,11 @@ function revealRole(playerIndex) {
     player.hasRevealed = true;
     GameState.revealedCount++;
     
-    // Show role
+    // Show only the word (no role)
     document.getElementById('player-name-display').textContent = player.name;
-    
-    const roleDisplay = document.getElementById('role-display');
     const wordDisplay = document.getElementById('word-display');
-    
-    roleDisplay.className = 'role-display ' + player.role;
-    
-    switch (player.role) {
-        case 'civilian':
-            roleDisplay.textContent = '🔵 Civilian';
-            wordDisplay.textContent = player.word;
-            wordDisplay.style.display = 'block';
-            break;
-        case 'mrwhite':
-            roleDisplay.textContent = '⚪ Mr. White';
-            wordDisplay.textContent = player.word;
-            wordDisplay.style.display = 'block';
-            break;
-    }
+    wordDisplay.textContent = player.word;
+    wordDisplay.style.display = 'block';
     
     showScreen('role-reveal-screen');
 }
@@ -1017,22 +992,16 @@ function confirmRoleViewed() {
         // Show pass device screen
         const remaining = GameState.playerCount - GameState.revealedCount;
         document.getElementById('cards-remaining').textContent = 
-            `${remaining} player${remaining !== 1 ? 's' : ''} still need to see their role`;
+            `${remaining} player${remaining !== 1 ? 's' : ''} still need to see their word`;
         showScreen('pass-device-screen');
     }
 }
 
 // ==================== GAMEPLAY ====================
 function startGameplay() {
-    GameState.gamePhase = "playing";
-    GameState.currentRound = 1;
-    
-    // Randomize turn order
-    GameState.turnOrder = shuffleArray([...getActivePlayers()]);
-    GameState.currentTurnIndex = 0;
-    
-    showScreen('gameplay-screen');
-    updateGameplayUI();
+    GameState.gamePhase = "voting";
+    // Go directly to voting
+    startVoting();
 }
 
 function updateGameplayUI() {
@@ -1111,24 +1080,7 @@ function nextTurn() {
 
 // ==================== VOTING ====================
 function startVoting() {
-    // Check if this is a voting round (every 2 rounds)
-    if (GameState.currentRound % 2 !== 0) {
-        // Not a voting round, go to next round
-        GameState.currentRound++;
-        GameState.currentTurnIndex = 0;
-        GameState.turnOrder = shuffleArray([...getActivePlayers()]);
-        
-        document.getElementById('next-turn').style.display = 'block';
-        document.getElementById('start-voting').style.display = 'none';
-        document.getElementById('start-voting').className = 'btn btn-danger';
-        
-        updateGameplayUI();
-        return;
-    }
-    
     GameState.gamePhase = "voting";
-    GameState.votes = {};
-    GameState.currentVoterIndex = 0;
     
     showScreen('voting-screen');
     initializeVoting();
@@ -1143,142 +1095,52 @@ function initializeVoting() {
     activePlayers.forEach(player => {
         const btn = document.createElement('button');
         btn.className = 'vote-btn';
-        btn.innerHTML = `
-            <span>${player.name}</span>
-            <span class="vote-count">0 votes</span>
-        `;
+        btn.innerHTML = `<span>${player.name}</span>`;
         btn.dataset.player = player.name;
         
-        btn.addEventListener('click', () => castVote(player.name, btn));
+        btn.addEventListener('click', () => eliminatePlayer(player.name));
         container.appendChild(btn);
     });
-    
-    // Update tally display
-    document.getElementById('total-voters').textContent = activePlayers.length;
-    document.getElementById('votes-cast').textContent = '0';
-    document.getElementById('vote-tally').classList.remove('hidden');
-    document.getElementById('reveal-votes').classList.add('hidden');
 }
 
-function castVote(votedFor, button) {
-    const activePlayers = getActivePlayers();
-    const currentVoter = activePlayers[GameState.currentVoterIndex];
+function eliminatePlayer(playerName) {
+    // Find and eliminate the player
+    const player = GameState.players.find(p => p.name === playerName);
+    if (!player) return;
     
-    if (!currentVoter) return;
+    player.eliminated = true;
     
-    // Record vote
-    GameState.votes[currentVoter.name] = votedFor;
+    // Show result
+    const resultContent = document.getElementById('vote-result-content');
     
-    // Visual feedback
-    document.querySelectorAll('.vote-btn').forEach(btn => btn.classList.remove('selected'));
-    button.classList.add('selected');
-    
-    // Update vote counts
-    updateVoteCounts();
-    
-    // Move to next voter
-    GameState.currentVoterIndex++;
-    document.getElementById('votes-cast').textContent = GameState.currentVoterIndex;
-    
-    if (GameState.currentVoterIndex >= activePlayers.length) {
-        // All votes cast
-        document.getElementById('reveal-votes').classList.remove('hidden');
+    if (player.role === 'mrwhite') {
+        // Mr. White was voted out! Give them a chance to guess
+        resultContent.innerHTML = `
+            <div class="result-icon">🎯</div>
+            <h2>You Found Them!</h2>
+            <p class="eliminated-name">${playerName}</p>
+            <p class="result-message">has the <strong>DIFFERENT WORD!</strong></p>
+            <p class="result-sub">But they get one chance to guess your word...</p>
+        `;
+        document.getElementById('continue-after-vote').textContent = 'Let Them Guess';
     } else {
-        // Prompt next voter
-        setTimeout(() => {
-            document.querySelectorAll('.vote-btn').forEach(btn => btn.classList.remove('selected'));
-            alert(`Pass the device to ${activePlayers[GameState.currentVoterIndex].name} to vote!`);
-        }, 500);
-    }
-}
-
-function updateVoteCounts() {
-    const voteCounts = {};
-    Object.values(GameState.votes).forEach(vote => {
-        voteCounts[vote] = (voteCounts[vote] || 0) + 1;
-    });
-    
-    document.querySelectorAll('.vote-btn').forEach(btn => {
-        const playerName = btn.dataset.player;
-        const count = voteCounts[playerName] || 0;
-        btn.querySelector('.vote-count').textContent = `${count} vote${count !== 1 ? 's' : ''}`;
-    });
-}
-
-function revealVotes() {
-    // Calculate vote results
-    const voteCounts = {};
-    const activePlayers = getActivePlayers();
-    
-    activePlayers.forEach(p => {
-        voteCounts[p.name] = 0;
-    });
-    
-    Object.values(GameState.votes).forEach(vote => {
-        voteCounts[vote] = (voteCounts[vote] || 0) + 1;
-    });
-    
-    // Sort by votes
-    const sortedResults = Object.entries(voteCounts)
-        .sort((a, b) => b[1] - a[1]);
-    
-    // Display results
-    const resultsContainer = document.getElementById('vote-results');
-    resultsContainer.innerHTML = '';
-    
-    const maxVotes = sortedResults[0][1];
-    
-    sortedResults.forEach(([name, votes]) => {
-        const item = document.createElement('div');
-        item.className = 'vote-result-item';
-        if (votes === maxVotes && maxVotes > 0) {
-            item.classList.add('eliminated');
-        }
-        
-        const percentage = activePlayers.length > 0 ? (votes / activePlayers.length) * 100 : 0;
-        
-        item.innerHTML = `
-            <span>${name}</span>
-            <div class="vote-bar">
-                <div class="vote-bar-fill" style="width: ${percentage}%"></div>
-            </div>
-            <span>${votes}</span>
+        // Wrong person eliminated
+        resultContent.innerHTML = `
+            <div class="result-icon">❌</div>
+            <h2>Wrong Person!</h2>
+            <p class="eliminated-name">${playerName}</p>
+            <p class="result-message">had the <strong>SAME WORD</strong> as you!</p>
+            <p class="result-sub">The person with the different word is still playing...</p>
         `;
-        
-        resultsContainer.appendChild(item);
-    });
-    
-    // Find player(s) with most votes
-    const maxVoteCount = sortedResults[0][1];
-    const playersWithMaxVotes = sortedResults.filter(([_, votes]) => votes === maxVoteCount);
-    
-    const eliminationResult = document.getElementById('elimination-result');
-    
-    if (playersWithMaxVotes.length > 1) {
-        // Tie - no elimination
-        eliminationResult.innerHTML = `
-            <h3>It's a Tie!</h3>
-            <p>No one is eliminated this round.</p>
-        `;
-    } else {
-        const eliminatedName = playersWithMaxVotes[0][0];
-        const eliminatedPlayer = GameState.players.find(p => p.name === eliminatedName);
-        eliminatedPlayer.eliminated = true;
-        
-        eliminationResult.innerHTML = `
-            <h3>Eliminated!</h3>
-            <p><strong>${eliminatedName}</strong> has been voted out!</p>
-        `;
+        document.getElementById('continue-after-vote').textContent = 'Continue Voting';
     }
     
     showScreen('vote-results-screen');
 }
 
 function continueAfterVote() {
-    // Check win conditions
-    const activePlayers = getActivePlayers();
     const mrWhite = GameState.mrWhitePlayer;
-    const civilians = activePlayers.filter(p => p.role === 'civilian');
+    const activePlayers = getActivePlayers();
     
     // Check if Mr. White was eliminated
     if (mrWhite.eliminated) {
@@ -1287,8 +1149,8 @@ function continueAfterVote() {
         return;
     }
     
-    // Check if all civilians are eliminated
-    if (civilians.length === 0) {
+    // Check if only Mr. White is left (Mr. White wins)
+    if (activePlayers.length <= 1) {
         endGame('mrwhite');
         return;
     }
@@ -1299,16 +1161,8 @@ function continueAfterVote() {
         return;
     }
     
-    // Continue to next round
-    GameState.currentRound++;
-    GameState.currentTurnIndex = 0;
-    GameState.turnOrder = shuffleArray([...activePlayers]);
-    
-    document.getElementById('next-turn').style.display = 'block';
-    document.getElementById('start-voting').style.display = 'none';
-    
-    showScreen('gameplay-screen');
-    updateGameplayUI();
+    // Continue voting
+    startVoting();
 }
 
 // ==================== MR. WHITE GUESS ====================

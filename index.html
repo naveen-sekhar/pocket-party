@@ -6,7 +6,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#1e1b4b">
+    <meta name="theme-color" content="#000000">
     <title>Mr. White - Party Game</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -25,10 +25,10 @@
                 <div class="rules-preview">
                     <h3>How to Play</h3>
                     <ul>
-                        <li>🔵 <strong>Civilians</strong> know the secret word</li>
-                        <li>⚪ <strong>Mr. White</strong> has a different word</li>
-                        <li>🎯 Find Mr. White before it's too late!</li>
-                        <li>🗳️ Voting happens every 2 rounds</li>
+                        <li>🎴 Everyone gets a secret word</li>
+                        <li>🤔 One player has a DIFFERENT word</li>
+                        <li>💬 Give clues about your word</li>
+                        <li>🗳️ Vote to find the odd one out!</li>
                     </ul>
                 </div>
             </div>
@@ -81,7 +81,7 @@
         <section id="card-reveal-screen" class="screen">
             <div class="container">
                 <h2>Select Your Card</h2>
-                <p class="instruction" id="card-instruction">Tap a card to reveal your role</p>
+                <p class="instruction" id="card-instruction">Tap a card to see your word</p>
                 <div id="card-grid" class="card-grid">
                     <!-- Cards will be populated by JS -->
                 </div>
@@ -92,7 +92,7 @@
         <section id="name-entry-screen" class="screen">
             <div class="container">
                 <h2>Who Are You?</h2>
-                <p class="instruction">Select your name to see your role</p>
+                <p class="instruction">Select your name to see your word</p>
                 <div id="available-names" class="name-buttons">
                     <!-- Names will be populated by JS -->
                 </div>
@@ -100,15 +100,15 @@
             </div>
         </section>
 
-        <!-- Role Reveal Screen -->
+        <!-- Word Reveal Screen -->
         <section id="role-reveal-screen" class="screen">
             <div class="container role-reveal-container">
                 <div id="role-card" class="role-card">
                     <h3 id="player-name-display"></h3>
-                    <div id="role-display" class="role-display"></div>
+                    <p class="word-label">Your Secret Word</p>
                     <div id="word-display" class="word-display"></div>
                 </div>
-                <p class="warning">⚠️ Memorize your role and word!</p>
+                <p class="warning">⚠️ Memorize your word! Don't show anyone!</p>
                 <button id="confirm-role" class="btn btn-primary btn-large">I've Memorized It</button>
             </div>
         </section>
@@ -129,74 +129,43 @@
             <div class="container">
                 <div class="success-icon">✅</div>
                 <h2>All Players Ready!</h2>
-                <p>Everyone has seen their role. Time to start the game!</p>
-                <button id="start-gameplay" class="btn btn-primary btn-large">Begin Discussion</button>
-            </div>
-        </section>
-
-        <!-- Gameplay Screen -->
-        <section id="gameplay-screen" class="screen">
-            <div class="container">
-                <div class="round-indicator">
-                    <span>Round <span id="current-round">1</span></span>
-                </div>
-                <h2>Discussion Phase</h2>
-                <p class="instruction">Each player gives ONE clue about their word</p>
-                
-                <div class="turn-tracker">
-                    <h3>Current Turn</h3>
-                    <div id="current-player-turn" class="current-turn"></div>
-                </div>
-
-                <div id="player-order" class="player-order">
-                    <!-- Player order will be populated by JS -->
-                </div>
-
-                <div class="button-group">
-                    <button id="next-turn" class="btn btn-primary">Next Player</button>
-                    <button id="start-voting" class="btn btn-danger">Start Voting</button>
-                </div>
+                <p>Everyone has their word. Discuss and give clues, then vote for who has the different word!</p>
+                <button id="start-gameplay" class="btn btn-primary btn-large">Start Voting</button>
             </div>
         </section>
 
         <!-- Voting Screen -->
         <section id="voting-screen" class="screen">
             <div class="container">
-                <h2>Voting Phase</h2>
-                <p class="instruction">Who do you think is Mr. White?</p>
+                <h2>🗳️ Voting Time!</h2>
+                <p class="instruction">Discuss offline, then select who the group voted for:</p>
                 
                 <div id="vote-options" class="vote-options">
                     <!-- Vote options will be populated by JS -->
                 </div>
 
-                <div id="vote-tally" class="vote-tally hidden">
-                    <h3>Votes Cast: <span id="votes-cast">0</span>/<span id="total-voters">0</span></h3>
-                </div>
-
-                <button id="reveal-votes" class="btn btn-primary btn-large hidden">Reveal Results</button>
+                <p class="vote-hint">Tap a player to eliminate them</p>
             </div>
         </section>
 
         <!-- Vote Results Screen -->
         <section id="vote-results-screen" class="screen">
             <div class="container">
-                <h2>Vote Results</h2>
-                <div id="vote-results" class="vote-results">
-                    <!-- Results will be populated by JS -->
+                <div id="vote-result-content">
+                    <!-- Result will be populated by JS -->
                 </div>
-                <div id="elimination-result" class="elimination-result"></div>
                 <button id="continue-after-vote" class="btn btn-primary btn-large">Continue</button>
             </div>
         </section>
 
-        <!-- Mr. White Guess Screen -->
+        <!-- Odd One Out Guess Screen -->
         <section id="mrwhite-guess-screen" class="screen">
             <div class="container">
                 <div class="dramatic-reveal">
-                    <h2>🎭 Mr. White Revealed!</h2>
+                    <h2>🎭 The Odd One Out!</h2>
                     <p id="mrwhite-name" class="mrwhite-name"></p>
                 </div>
-                <p class="instruction">Mr. White gets ONE chance to guess the civilian word!</p>
+                <p class="instruction">You get ONE chance to guess the other players' word!</p>
                 <input type="text" id="guess-input" class="guess-input" placeholder="Enter your guess...">
                 <div class="button-group">
                     <button id="submit-guess" class="btn btn-primary btn-large">Submit Guess</button>
