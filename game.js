@@ -724,6 +724,7 @@ const GameState = {
     // Players
     players: [], // Array of { name, role, word, eliminated, hasRevealed }
     playerNames: [],
+    savedNames: [], // Retain entered names across screen navigations
     
     // Card reveal
     availableCards: [],
@@ -754,6 +755,7 @@ const GameState = {
         this.selectedTopic = null;
         this.players = [];
         this.playerNames = [];
+        this.savedNames = [];
         this.availableCards = [];
         this.currentCardIndex = null;
         this.revealedCount = 0;
@@ -842,6 +844,11 @@ function initializeApp() {
     
     // Names screen
     document.getElementById('back-to-setup').addEventListener('click', () => {
+        // Save entered names before going back
+        const inputs = document.querySelectorAll('#name-inputs input');
+        inputs.forEach((input, i) => {
+            GameState.savedNames[i] = input.value;
+        });
         showScreen('setup-screen');
     });
     
@@ -908,21 +915,31 @@ function updatePlayerCountDisplay() {
 
 // ==================== NAMES SCREEN ====================
 function initializeNamesScreen() {
+    // Save any currently entered names before rebuilding
+    const existingInputs = document.querySelectorAll('#name-inputs input');
+    if (existingInputs.length > 0) {
+        existingInputs.forEach((input, i) => {
+            GameState.savedNames[i] = input.value;
+        });
+    }
+
     const container = document.getElementById('name-inputs');
     container.innerHTML = '';
     
     for (let i = 0; i < GameState.playerCount; i++) {
         const group = document.createElement('div');
         group.className = 'name-input-group';
+        const savedValue = GameState.savedNames[i] || '';
         group.innerHTML = `
             <span>${i + 1}.</span>
-            <input type="text" placeholder="Player ${i + 1}" data-index="${i}" maxlength="15">
+            <input type="text" placeholder="Player ${i + 1}" data-index="${i}" maxlength="15" value="${savedValue}">
         `;
         container.appendChild(group);
     }
     
-    // Focus first input
-    container.querySelector('input').focus();
+    // Focus the first empty input, or the first input
+    const firstEmpty = Array.from(container.querySelectorAll('input')).find(inp => !inp.value);
+    (firstEmpty || container.querySelector('input')).focus();
 }
 
 // ==================== CARD REVEAL ====================
